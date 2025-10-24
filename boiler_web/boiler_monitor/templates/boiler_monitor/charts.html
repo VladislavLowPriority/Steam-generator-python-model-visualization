@@ -1,0 +1,256 @@
+{% extends 'boiler_monitor/base.html' %}
+
+{% block title %}Графики - Система управления котлом{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-chart-line"></i> Графики параметров котла</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <canvas id="temperature-chart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <canvas id="pressure-chart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <canvas id="water-mass-chart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <canvas id="pressure-comparison-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Инициализация графиков
+    const tempCtx = document.getElementById('temperature-chart').getContext('2d');
+    const pressureCtx = document.getElementById('pressure-chart').getContext('2d');
+    const waterCtx = document.getElementById('water-mass-chart').getContext('2d');
+    const comparisonCtx = document.getElementById('pressure-comparison-chart').getContext('2d');
+    
+    const temperatureChart = new Chart(tempCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Температура воды',
+                    data: [],
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.1,
+                    fill: false
+                },
+                {
+                    label: 'Температура топки',
+                    data: [],
+                    borderColor: 'rgb(255, 159, 64)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.1)',
+                    tension: 0.1,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Температуры'
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 400,
+                    title: {
+                        display: true,
+                        text: '°C'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Время, с'
+                    }
+                }
+            }
+        }
+    });
+    
+    const pressureChart = new Chart(pressureCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Давление пара',
+                    data: [],
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.1,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Давление пара'
+                }
+            },
+            scales: {
+                y: {
+                    min: 800,
+                    max: 1100,
+                    title: {
+                        display: true,
+                        text: 'кПа'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Время, с'
+                    }
+                }
+            }
+        }
+    });
+    
+    const waterChart = new Chart(waterCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Масса воды',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.1,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Масса воды в барабане'
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 4000,
+                    title: {
+                        display: true,
+                        text: 'кг'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Время, с'
+                    }
+                }
+            }
+        }
+    });
+    
+    const comparisonChart = new Chart(comparisonCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Фактическое давление',
+                    data: [],
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.1,
+                    fill: false
+                },
+                {
+                    label: 'Измеренное давление',
+                    data: [],
+                    borderColor: 'rgb(153, 102, 255)',
+                    backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                    tension: 0.1,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Сравнение давлений'
+                }
+            },
+            scales: {
+                y: {
+                    min: 800,
+                    max: 1100,
+                    title: {
+                        display: true,
+                        text: 'кПа'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Время, с'
+                    }
+                }
+            }
+        }
+    });
+    
+    function updateCharts() {
+        fetch('/api/chart-data/')
+            .then(response => response.json())
+            .then(data => {
+                // Обновление графиков
+                temperatureChart.data.labels = data.time;
+                temperatureChart.data.datasets[0].data = data.temperature_water;
+                temperatureChart.data.datasets[1].data = data.temperature_combustion;
+                temperatureChart.update('none'); // 'none' для плавного обновления
+                
+                pressureChart.data.labels = data.time;
+                pressureChart.data.datasets[0].data = data.pressure;
+                pressureChart.update('none');
+                
+                waterChart.data.labels = data.time;
+                waterChart.data.datasets[0].data = data.water_mass;
+                waterChart.update('none');
+                
+                comparisonChart.data.labels = data.time;
+                comparisonChart.data.datasets[0].data = data.pressure;
+                comparisonChart.data.datasets[1].data = data.measured_pressure;
+                comparisonChart.update('none');
+            })
+            .catch(error => console.error('Error:', error));
+    }
+    
+    // Обновление графиков каждые 3 секунды
+    setInterval(updateCharts, 3000);
+    updateCharts(); // Первоначальная загрузка
+</script>
+{% endblock %}

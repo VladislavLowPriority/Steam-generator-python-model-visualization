@@ -1,0 +1,173 @@
+{% extends 'boiler_monitor/base.html' %}
+
+{% block title %}Панель управления - Система управления котлом{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Системная информация -->
+    <div class="col-md-4 mb-4">
+        <div class="card parameter-card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-info-circle"></i> Системная информация
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <small class="text-muted">Системное время</small>
+                    <div id="system-time" class="value-display">--:--:--</div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Погода</small>
+                    <div id="weather" class="value-display">+10°C</div>
+                </div>
+                <div>
+                    <small class="text-muted">Статус</small>
+                    <div><span class="badge bg-success">Норма</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Температуры -->
+    <div class="col-md-4 mb-4">
+        <div class="card parameter-card">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-thermometer-half"></i> Температуры
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">Температура воды</small>
+                    <div id="temperature-water" class="value-display">-- °C</div>
+                </div>
+                <div>
+                    <small class="text-muted">Температура топки</small>
+                    <div id="temperature-combustion" class="value-display">-- °C</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Давление -->
+    <div class="col-md-4 mb-4">
+        <div class="card parameter-card">
+            <div class="card-header bg-danger text-white">
+                <i class="fas fa-tachometer-alt"></i> Давление
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">Фактическое давление</small>
+                    <div id="pressure" class="value-display">-- кПа</div>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted">Измеренное давление</small>
+                    <div id="measured-pressure" class="value-display">-- кПа</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Уровень воды -->
+    <div class="col-md-6 mb-4">
+        <div class="card parameter-card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-water"></i> Уровень воды
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">Масса воды</small>
+                    <div id="water-mass" class="value-display">-- кг</div>
+                </div>
+                <div class="progress mb-3" style="height: 20px;">
+                    <div id="water-level-bar" class="progress-bar" role="progressbar" style="width: 50%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Управление -->
+    <div class="col-md-6 mb-4">
+        <div class="card parameter-card">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-cog"></i> Управление
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Задание давления (кПа)</label>
+                    <div class="input-group">
+                        <input type="number" id="pressure-setpoint" class="form-control" value="999510">
+                        <button class="btn btn-primary" onclick="updateSetpoint('pressure')">
+                            <i class="fas fa-save"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Задание уровня воды (кг)</label>
+                    <div class="input-group">
+                        <input type="number" id="water-level-setpoint" class="form-control" value="2500">
+                        <button class="btn btn-primary" onclick="updateSetpoint('water')">
+                            <i class="fas fa-save"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function updateData() {
+        fetch('/api/current-data/')
+            .then(response => response.json())
+            .then(data => {
+                // Обновление значений
+                document.getElementById('temperature-water').textContent = data.temperature_water + ' °C';
+                document.getElementById('temperature-combustion').textContent = data.temperature_combustion + ' °C';
+                document.getElementById('pressure').textContent = data.pressure.toLocaleString() + ' кПа';
+                document.getElementById('measured-pressure').textContent = data.measured_pressure.toLocaleString() + ' кПа';
+                document.getElementById('water-mass').textContent = data.water_mass + ' кг';
+                document.getElementById('error').textContent = data.error + ' кПа';
+                document.getElementById('system-time').textContent = data.system_time;
+                document.getElementById('weather').textContent = data.weather;
+                
+                // Прогресс-бар уровня воды
+                const waterLevel = (data.water_mass / 3000) * 100;
+                document.getElementById('water-level-bar').style.width = Math.min(waterLevel, 100) + '%';
+                
+                // Обновление полей ввода
+                document.getElementById('pressure-setpoint').value = data.pressure_setpoint;
+                document.getElementById('water-level-setpoint').value = data.water_level_setpoint;
+            })
+            .catch(error => console.error('Error:', error));
+    }
+    
+    function updateSetpoint(type) {
+        const data = {};
+        if (type === 'pressure') {
+            data.pressure_setpoint = parseFloat(document.getElementById('pressure-setpoint').value);
+        } else {
+            data.water_level_setpoint = parseFloat(document.getElementById('water-level-setpoint').value);
+        }
+        
+        fetch('/api/update-setpoint/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.status === 'success') {
+                alert('Уставка обновлена!');
+            } else {
+                alert('Ошибка: ' + result.message);
+            }
+        });
+    }
+    
+    // Обновление данных каждые 2 секунды
+    setInterval(updateData, 2000);
+    updateData(); // Первоначальная загрузка
+</script>
+{% endblock %}
