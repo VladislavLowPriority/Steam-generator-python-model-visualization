@@ -65,8 +65,8 @@
 
 ```bash
 # Клонирование репозитория
-git clone https://github.com/your-username/boiler-monitor-system.git
-cd boiler-monitor-system
+git clone github.com/VladislavLowPriority/Steam-generator-python-model-visualization
+cd Steam-generator-python-model-visualization/boiler_web
 
 # Установка необходимых библиотек
 pip install django numpy scipy
